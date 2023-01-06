@@ -190,8 +190,8 @@ export default class SSOClient {
   async logout(): Promise<void> {
     this.clearSession();
     const url = this.buildLogoutUrl({
-      logout_uri: window.location.origin,
       client_id: this.getClientId(),
+      logout_uri: this.getRedirectUri(),
     });
     window.location.assign(url);
   }

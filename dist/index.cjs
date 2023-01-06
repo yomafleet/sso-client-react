@@ -417,8 +417,8 @@ class SSOClient {
         return __awaiter(this, void 0, void 0, function* () {
             this.clearSession();
             const url = this.buildLogoutUrl({
-                logout_uri: window.location.origin,
                 client_id: this.getClientId(),
+                logout_uri: this.getRedirectUri(),
             });
             window.location.assign(url);
         });
