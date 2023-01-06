@@ -29,7 +29,6 @@ const SSOProvider: React.FC<React.PropsWithChildren<SSOProviderProps>> = ({
 }) => {
   const didInitialise = useRef<boolean>(false);
   const [state, dispatch] = useReducer(reducer, initialAuthState);
-
   const [client] = useState(
     () =>
       new SSOClient({
@@ -46,16 +45,11 @@ const SSOProvider: React.FC<React.PropsWithChildren<SSOProviderProps>> = ({
       try {
         let user: User | undefined;
         if (hasAuthParams()) {
-          // send api call
-          console.log("Has Code");
           const queryStringFragments = window.location.href.split("?").slice(1);
-          if (queryStringFragments.length === 0) {
+          if (queryStringFragments.length === 0)
             throw new Error("There are no query params available for parsing.");
-          }
           const { code } = parseQuery(queryStringFragments.join(""));
-          if (code) {
-            await client.handleRedirectCallback(code);
-          }
+          if (code) await client.handleRedirectCallback(code);
           user = await client.getUser();
           onRedirectCalbck(user);
         } else {

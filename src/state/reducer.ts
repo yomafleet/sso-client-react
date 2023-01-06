@@ -2,11 +2,9 @@ import { User } from "../User";
 import { AuthState } from "./auth-state";
 
 type Action =
-  | { type: "LOGIN_POPUP_STARTED" }
   | {
       type:
         | "INITIALISED"
-        | "LOGIN_POPUP_COMPLETE"
         | "GET_ACCESS_TOKEN_COMPLETE"
         | "HANDLE_REDIRECT_COMPLETE";
       user?: User;
@@ -16,12 +14,6 @@ type Action =
 
 export const reducer = (state: AuthState, action: Action): AuthState => {
   switch (action.type) {
-    case "LOGIN_POPUP_STARTED":
-      return {
-        ...state,
-        isLoading: true,
-      };
-    case "LOGIN_POPUP_COMPLETE":
     case "INITIALISED":
       return {
         ...state,

@@ -1,5 +1,6 @@
 import Cookies from "js-cookie";
 import jwtDecode from "jwt-decode";
+import { oauthToken, TokenResult } from "./api";
 import {
   ACCESS_TOKEN,
   ID_TOKEN,
@@ -7,7 +8,6 @@ import {
   IS_LOGGED_IN_VALUE,
   REFRESH_TOKEN,
 } from "./config/app";
-import { oauthToken, TokenResult } from "./api";
 import { User } from "./User";
 import { createQueryParams } from "./utils/utils";
 
@@ -33,36 +33,64 @@ export interface LogoutOptions {
 export default class SSOClient {
   constructor(private options: SSOClientOptions) {}
 
-  async handleRedirectCallback(code: string) {
+  /**
+   * handle redirect callback that assign url from auth server
+   *
+   * @param code string
+   * @return Promise<void>
+   */
+  async handleRedirectCallback(code: string): Promise<void> {
     const res = await oauthToken({
-      baseUrl: "http://localhost:4000/api",
+      baseUrl: `https://${this.getDomain()}`,
       grant_type: "authorization_code",
       client_id: this.getClientId(),
       code,
       redirect_uri: this.getRedirectUri(),
     });
-    if (res) {
-      this.saveSession({
-        id_token: res?.id_token,
-        access_token: res?.access_token,
-        refresh_token: res?.refresh_token,
-      });
-    }
+    this.saveSession({
+      id_token: res?.id_token,
+      access_token: res?.access_token,
+      refresh_token: res?.refresh_token,
+    });
   }
 
-  private saveSession({ id_token, access_token, refresh_token }: TokenResult) {
+  /**
+   * handle to save session to storage
+   *
+   * @param param0 TokenResult
+   */
+  private saveSession({
+    id_token,
+    access_token,
+    refresh_token,
+  }: TokenResult): void {
     window.localStorage.setItem(ID_TOKEN, id_token);
     window.localStorage.setItem(ACCESS_TOKEN, access_token);
     window.localStorage.setItem(REFRESH_TOKEN, refresh_token);
     Cookies.set(IS_LOGGED_IN_KEY, IS_LOGGED_IN_VALUE);
   }
 
-  private authorizeUrl(authorizeOptions: AuthorizeOptions) {
-    return `https://${this.getDomain()}/oauth2/authorize?${createQueryParams(
+  /**
+   * build authorize url, authorize url is just a redirect url
+   * The /oauth2/authorize endpoint is a redirection endpoint
+   * that supports two redirect destinations.
+   * If you include an identity_provider or idp_identifier parameter in the URL,
+   * it silently redirects your user to the sign-in page for that identity provider (IdP).
+   * Otherwise, it redirects to the Login endpoint with the same URL parameters that you included in your request.
+   *
+   * @param authorizeOptions AuthorizeOptions
+   * @returns string
+   */
+  private authorizeUrl = (authorizeOptions: AuthorizeOptions) =>
+    `https://${this.getDomain()}/oauth2/authorize?${createQueryParams(
       authorizeOptions
     )}`;
-  }
 
+  /**
+   * parse auth user from id_token
+   *
+   * @returns Promise<User>
+   */
   async getUser<TUser extends User>(): Promise<TUser> {
     return Promise.resolve(
       jwtDecode(window.localStorage.getItem(ID_TOKEN) as string)
@@ -73,49 +101,80 @@ export default class SSOClient {
     //
   }
 
-  private getClientId(): string {
-    return this.options.client_id;
-  }
+  /**
+   * get client_id
+   *
+   * @returns string
+   */
+  private getClientId = (): string => this.options.client_id;
 
-  private getRedirectUri(): string {
-    return this.options.redirect_uri;
-  }
+  /**
+   * get redirect_uri
+   *
+   * @returns string
+   */
+  private getRedirectUri = (): string => this.options.redirect_uri;
 
+  /**
+   * get domain
+   *
+   * @returns string
+   */
   private getDomain(): string {
     // TODO check valid domain
     return this.options.domain;
   }
 
-  private async buildAuthorizeUrl(): Promise<string> {
-    return Promise.resolve(
-      this.authorizeUrl({
-        client_id: this.getClientId(),
-        response_type: "code",
-        state: "Cognito",
-        scope: "aws.cognito.signin.user.admin+email+openid+profile",
-        redirect_uri: this.getRedirectUri(),
-      })
-    );
-  }
+  /**
+   * build authorize url
+   *
+   * @returns string
+   */
+  private buildAuthorizeUrl = (): string =>
+    this.authorizeUrl({
+      client_id: this.getClientId(),
+      response_type: "code",
+      state: "Cognito",
+      scope: "aws.cognito.signin.user.admin+email+openid+profile",
+      redirect_uri: this.getRedirectUri(),
+    });
 
+  /**
+   * base url
+   *
+   * @param path string
+   * @returns string
+   */
   private _url(path: string): string {
     return `https://${this.getDomain()}/${path}`;
   }
 
-  private buildLogoutUrl(): string {
-    return this._url(
+  /**
+   * build logout url
+   *
+   * @returns string
+   */
+  private buildLogoutUrl = ({ logout_uri, client_id }: LogoutOptions): string =>
+    this._url(
       `/logout?${createQueryParams({
-        client_id: this.getClientId(),
-        logout_uri: "http://localhost:3000/",
+        client_id,
+        logout_uri,
       })}`
     );
-  }
 
+  /**
+   *
+   */
   async loginWithRedirect(): Promise<any> {
-    const url = await this.buildAuthorizeUrl();
+    const url = this.buildAuthorizeUrl();
     window.location.assign(url);
   }
 
+  /**
+   * clear session  from storage
+   *
+   * @reutrn void
+   */
   private clearSession() {
     window.localStorage.removeItem(ID_TOKEN);
     window.localStorage.removeItem(ACCESS_TOKEN);
@@ -123,9 +182,17 @@ export default class SSOClient {
     Cookies.remove(IS_LOGGED_IN_KEY);
   }
 
+  /**
+   * handle logout
+   *
+   * @return Promise<void>
+   */
   async logout(): Promise<void> {
     this.clearSession();
-    const url = this.buildLogoutUrl();
+    const url = this.buildLogoutUrl({
+      logout_uri: window.location.origin,
+      client_id: this.getClientId(),
+    });
     window.location.assign(url);
   }
 }
