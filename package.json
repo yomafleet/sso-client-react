@@ -1,0 +1,62 @@
+{
+  "name": "@yomafleet/sso-client-react",
+  "version": "0.0.1",
+  "description": "SSO Client React",
+  "author": {
+    "name": "Nay Soe Win",
+    "email": "naysoewin@yomafleet.com",
+    "url": "https://yomafleet.com"
+  },
+  "license": "MIT",
+  "main": "dist/index.cjs",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "exports": {
+    "import": "./dist/index.esm.js",
+    "require": "./dist/index.cjs",
+    "types": "./dist/index.d.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yomafleet/sso-client-react"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/yomafleet/sso-client-react/issues"
+  },
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "js-cookie": "^3.0.1",
+    "jwt-decode": "^3.1.2",
+    "rimraf": "^3.0.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^22.0.2",
+    "@rollup/plugin-node-resolve": "^14.0.1",
+    "@rollup/plugin-typescript": "^8.5.0",
+    "@types/js-cookie": "^3.0.2",
+    "@types/react": "^18.0.19",
+    "prettier": "2.8.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rollup": "^2.79.0",
+    "rollup-plugin-dts": "^4.2.2",
+    "rollup-plugin-peer-deps-external": "^2.2.4",
+    "rollup-plugin-terser": "^7.0.2",
+    "tslib": "^2.4.0",
+    "typescript": "^4.8.3"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0"
+  }
+}
