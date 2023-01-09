@@ -1,4 +1,4 @@
-import { User } from "../User";
+import { User } from "../user";
 
 export interface AuthState<TUser extends User = User> {
   error?: Error;

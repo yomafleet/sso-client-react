@@ -44,3 +44,33 @@ export const oauthToken = async ({
     throw new Error("Error Fetching Token");
   }
 };
+
+/**
+ * request oauth token `domain/oauth2/token`
+ *
+ * @param param0 OauthTokenProps
+ * @returns Promise<TokenResult>
+ */
+export const refreshToken = async ({
+  baseUrl,
+  client_id,
+  refresh_token,
+}: any): Promise<TokenResult> => {
+  try {
+    const res = await fetch(`${baseUrl}/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id,
+        refresh_token,
+      }),
+    });
+    if (!res.ok) throw new Error("Error Fetching Token");
+    return await res.json();
+  } catch (error) {
+    throw new Error("Error Fetching Token");
+  }
+};

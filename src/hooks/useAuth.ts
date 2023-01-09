@@ -1,6 +1,6 @@
 import { useContext } from "react";
-import { SSOContext, SSOContextInterface } from "../SSOContext";
-import { User } from "../User";
+import { SSOContext, SSOContextInterface } from "../sso-context";
+import { User } from "../user";
 
 /**
  * ```js

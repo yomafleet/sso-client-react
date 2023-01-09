@@ -6,11 +6,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import SSOClient from "./SSOClient";
-import { SSOContext } from "./SSOContext";
+import SSOClient from "./sso-client";
+import { SSOContext } from "./sso-context";
 import { initialAuthState } from "./state/auth-state";
 import { reducer } from "./state/reducer";
-import { User } from "./User";
+import { User } from "./user";
 import { hasAuthParams, parseQuery } from "./utils/utils";
 
 interface SSOProviderProps {

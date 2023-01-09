@@ -8,7 +8,7 @@ import {
   IS_LOGGED_IN_VALUE,
   REFRESH_TOKEN,
 } from "./config/app";
-import { User } from "./User";
+import { User } from "./user";
 import { createQueryParams } from "./utils/utils";
 
 export interface SSOClientOptions {
@@ -145,9 +145,8 @@ export default class SSOClient {
    * @param path string
    * @returns string
    */
-  private _url(path: string): string {
-    return `https://${this.getDomain()}/${path}`;
-  }
+  private _url = (path: string): string =>
+    `https://${this.getDomain()}/${path}`;
 
   /**
    * build logout url
@@ -163,7 +162,9 @@ export default class SSOClient {
     );
 
   /**
+   * login with redirect, when press login button it will redirect to hosted ui
    *
+   * @returns Promise<any>
    */
   async loginWithRedirect(): Promise<any> {
     const url = this.buildAuthorizeUrl();

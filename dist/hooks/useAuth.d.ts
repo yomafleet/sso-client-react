@@ -1,6 +1,6 @@
 /// <reference types="react" />
-import { SSOContextInterface } from "../SSOContext";
-import { User } from "../User";
+import { SSOContextInterface } from "../sso-context";
+import { User } from "../user";
 /**
  * ```js
  * const {

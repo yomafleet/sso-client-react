@@ -1,4 +1,4 @@
-import { User } from "./User";
+import { User } from "./user";
 export interface SSOClientOptions {
     domain: string;
     client_id: string;
@@ -88,7 +88,9 @@ export default class SSOClient {
      */
     private buildLogoutUrl;
     /**
+     * login with redirect, when press login button it will redirect to hosted ui
      *
+     * @returns Promise<any>
      */
     loginWithRedirect(): Promise<any>;
     /**

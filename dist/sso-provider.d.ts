@@ -1,5 +1,5 @@
 import React from "react";
-import { User } from "./User";
+import { User } from "./user";
 interface SSOProviderProps {
     domain: string;
     clientId: string;

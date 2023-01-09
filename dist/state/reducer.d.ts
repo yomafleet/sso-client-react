@@ -1,4 +1,4 @@
-import { User } from "../User";
+import { User } from "../user";
 import { AuthState } from "./auth-state";
 type Action = {
     type: "INITIALISED" | "GET_ACCESS_TOKEN_COMPLETE" | "HANDLE_REDIRECT_COMPLETE";

@@ -1,2 +1,2 @@
 export { default as useAuth } from "./hooks/useAuth";
-export { default as SSOProvider } from "./SSOProvider";
+export { default as SSOProvider } from "./sso-provider";

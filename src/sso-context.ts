@@ -1,6 +1,6 @@
 import React from "react";
 import { AuthState, initialAuthState } from "./state/auth-state";
-import { User } from "./User";
+import { User } from "./user";
 
 export interface SSOContextInterface<TUser extends User = User>
   extends AuthState {

@@ -313,6 +313,13 @@ class SSOClient {
             redirect_uri: this.getRedirectUri(),
         });
         /**
+         * base url
+         *
+         * @param path string
+         * @returns string
+         */
+        this._url = (path) => `https://${this.getDomain()}/${path}`;
+        /**
          * build logout url
          *
          * @returns string
@@ -380,16 +387,9 @@ class SSOClient {
         return this.options.domain;
     }
     /**
-     * base url
+     * login with redirect, when press login button it will redirect to hosted ui
      *
-     * @param path string
-     * @returns string
-     */
-    _url(path) {
-        return `https://${this.getDomain()}/${path}`;
-    }
-    /**
-     *
+     * @returns Promise<any>
      */
     loginWithRedirect() {
         return __awaiter(this, void 0, void 0, function* () {
