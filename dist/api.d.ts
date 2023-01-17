@@ -8,7 +8,8 @@ interface OauthTokenProps {
 export interface TokenResult {
     access_token: string;
     id_token: string;
-    refresh_token: string;
+    refresh_token?: string;
+    expires_in?: number;
 }
 /**
  * request oauth token `domain/oauth2/token`

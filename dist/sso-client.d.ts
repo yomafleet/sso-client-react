@@ -1,3 +1,5 @@
+import { TokenResult } from "./api";
+import { IStorageManager } from "./storage";
 import { User } from "./user";
 export interface SSOClientOptions {
     domain: string;
@@ -15,9 +17,11 @@ export interface LogoutOptions {
     client_id: string;
     logout_uri: string;
 }
+type Session = TokenResult;
 export default class SSOClient {
     private options;
-    constructor(options: SSOClientOptions);
+    private storage;
+    constructor(options: SSOClientOptions, storage?: IStorageManager);
     /**
      * handle redirect callback that assign url from auth server
      *
@@ -49,7 +53,19 @@ export default class SSOClient {
      * @returns Promise<User>
      */
     getUser<TUser extends User>(): Promise<TUser>;
-    private checkSession;
+    /**
+     * check token is expried or not
+     *
+     * @param token string
+     * @returns boolean
+     */
+    private isJwtExpired;
+    /**
+     * check has valid session on storage or not
+     *
+     * @returns Promise<boolean>
+     */
+    getSession(): Session | null;
     /**
      * get client_id
      *
@@ -90,15 +106,28 @@ export default class SSOClient {
     /**
      * login with redirect, when press login button it will redirect to hosted ui
      *
-     * @returns Promise<any>
+     * @returns Promise<void>
      */
-    loginWithRedirect(): Promise<any>;
+    loginWithRedirect(): Promise<void>;
+    /**
+     * refresh token request to cognito and
+     * save access_token, id_token and expries_in to session
+     *
+     * @return Promise<void>
+     */
+    refreshToken(): Promise<void>;
+    /**
+     * get refresh_token from session
+     *
+     * @returns string
+     */
+    private getRefreshToken;
     /**
      * clear session  from storage
      *
      * @reutrn void
      */
-    private clearSession;
+    clearSession(): void;
     /**
      * handle logout
      *
@@ -106,3 +135,4 @@ export default class SSOClient {
      */
     logout(): Promise<void>;
 }
+export {};

@@ -1,9 +1,8 @@
 import React from "react";
+import SSOClient from "./sso-client";
 import { User } from "./user";
 interface SSOProviderProps {
-    domain: string;
-    clientId: string;
-    redirectUri: string;
+    client: SSOClient;
     onRedirectCalbck: (value: User) => void;
 }
 declare const SSOProvider: React.FC<React.PropsWithChildren<SSOProviderProps>>;

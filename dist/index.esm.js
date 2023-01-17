@@ -1,4 +1,4 @@
-import React, { useContext, useRef, useReducer, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useContext, useRef, useReducer, useEffect, useCallback, useMemo } from 'react';
 import { jsx } from 'react/jsx-runtime';
 
 /**
@@ -15,7 +15,7 @@ const initialAuthState = {
 const stub = () => {
     throw new Error("You forgot to wrap your component in <SSOProvider>.");
 };
-const initialContext = Object.assign(Object.assign({}, initialAuthState), { loginWithRedirect: stub, logout: stub });
+const initialContext = Object.assign(Object.assign({}, initialAuthState), { loginWithRedirect: stub, refreshToken: stub, logout: stub });
 const SSOContext = React.createContext(initialContext);
 
 /**
@@ -220,12 +220,82 @@ const oauthToken = ({ baseUrl, grant_type, client_id, code, redirect_uri, }) => 
         throw new Error("Error Fetching Token");
     }
 });
+/**
+ * request oauth token `domain/oauth2/token`
+ *
+ * @param param0 OauthTokenProps
+ * @returns Promise<TokenResult>
+ */
+const refreshToken = ({ baseUrl, client_id, refresh_token, }) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const res = yield fetch(`${baseUrl}/oauth2/token`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                grant_type: "refresh_token",
+                client_id,
+                refresh_token,
+            }),
+        });
+        if (!res.ok)
+            throw new Error("Error Fetching Token");
+        return yield res.json();
+    }
+    catch (error) {
+        throw new Error("Error Fetching Token");
+    }
+});
 
 const ACCESS_TOKEN = "Yoma_Fleet_access_token";
 const REFRESH_TOKEN = "Yoma_Fleet_refresh_token";
 const ID_TOKEN = "Yoma_Fleet_id_token";
+const EXPIRES_IN = "Yoma_Fleet_expires_in";
 const IS_LOGGED_IN_KEY = "Yoma_Fleet__JYU^E^WE&E";
 const IS_LOGGED_IN_VALUE = "fd44adYnj544(^5q43)933b763c7049ea844b5";
+
+class LocalStorageManager {
+    constructor(prefix = "SSO_Client") {
+        this.prefix = prefix;
+    }
+    /**
+     * set item to localStorage
+     *
+     * @param key string
+     * @param value string
+     * @return void
+     */
+    setItem(key, value) {
+        window.localStorage.setItem(`${this.prefix}__${key}`, JSON.stringify(value));
+    }
+    /**
+     * get item from localStorage
+     *
+     * @param key string
+     * @returns T | undefined
+     */
+    getItem(key) {
+        const json = window.localStorage.getItem(`${this.prefix}__${key}`);
+        if (!json)
+            return;
+        try {
+            return JSON.parse(json);
+        }
+        catch (e) {
+            return;
+        }
+    }
+    /**
+     * remove item from localStorage
+     *
+     * @param key string
+     * @return void
+     */
+    removeItem(key) {
+        window.localStorage.removeItem(`${this.prefix}__${key}`);
+    }
+}
 
 const CODE_RE = /[?&]code=[^&]+/;
 const STATE_RE = /[?&]state=[^&]+/;
@@ -266,8 +336,9 @@ const parseQuery = (queryString) => {
 };
 
 class SSOClient {
-    constructor(options) {
+    constructor(options, storage = new LocalStorageManager()) {
         this.options = options;
+        this.storage = storage;
         /**
          * build authorize url, authorize url is just a redirect url
          * The /oauth2/authorize endpoint is a redirection endpoint
@@ -301,7 +372,7 @@ class SSOClient {
             client_id: this.getClientId(),
             response_type: "code",
             state: "Cognito",
-            scope: "aws.cognito.signin.user.admin+email+openid+profile",
+            scope: "email+openid+profile",
             redirect_uri: this.getRedirectUri(),
         });
         /**
@@ -340,6 +411,7 @@ class SSOClient {
                 id_token: res === null || res === void 0 ? void 0 : res.id_token,
                 access_token: res === null || res === void 0 ? void 0 : res.access_token,
                 refresh_token: res === null || res === void 0 ? void 0 : res.refresh_token,
+                expires_in: res.expires_in,
             });
         });
     }
@@ -348,10 +420,13 @@ class SSOClient {
      *
      * @param param0 TokenResult
      */
-    saveSession({ id_token, access_token, refresh_token, }) {
-        window.localStorage.setItem(ID_TOKEN, id_token);
-        window.localStorage.setItem(ACCESS_TOKEN, access_token);
-        window.localStorage.setItem(REFRESH_TOKEN, refresh_token);
+    saveSession({ id_token, access_token, refresh_token, expires_in, }) {
+        this.storage.setItem(ID_TOKEN, id_token);
+        this.storage.setItem(ACCESS_TOKEN, access_token);
+        if (refresh_token)
+            this.storage.setItem(REFRESH_TOKEN, refresh_token);
+        if (expires_in)
+            this.storage.setItem(EXPIRES_IN, expires_in.toString());
         api.set(IS_LOGGED_IN_KEY, IS_LOGGED_IN_VALUE);
     }
     /**
@@ -361,13 +436,50 @@ class SSOClient {
      */
     getUser() {
         return __awaiter(this, void 0, void 0, function* () {
-            return Promise.resolve(o(window.localStorage.getItem(ID_TOKEN)));
+            // if (!this.getSession()) {
+            //   return Promise.reject("Invalid session");
+            // }
+            const id_token = this.storage.getItem(ID_TOKEN);
+            // if (!id_token) return Promise.reject("id_token not defined");
+            return Promise.resolve(o(id_token));
         });
     }
-    checkSession() {
-        return __awaiter(this, void 0, void 0, function* () {
-            //
-        });
+    /**
+     * check token is expried or not
+     *
+     * @param token string
+     * @returns boolean
+     */
+    isJwtExpired(token) {
+        if (typeof token !== "string" || !token)
+            return false;
+        const { exp } = o(token);
+        const currentTime = new Date().getTime() / 1000;
+        return !exp || currentTime > exp;
+    }
+    /**
+     * check has valid session on storage or not
+     *
+     * @returns Promise<boolean>
+     */
+    getSession() {
+        const access_token = this.storage.getItem(ACCESS_TOKEN);
+        const id_token = this.storage.getItem(ID_TOKEN);
+        const refresh_token = this.storage.getItem(REFRESH_TOKEN);
+        // const expires_in = this.storage.getItem(EXPIRES_IN);
+        if (access_token &&
+            id_token &&
+            refresh_token &&
+            !this.isJwtExpired(access_token)) {
+            return {
+                access_token,
+                id_token,
+                refresh_token,
+            };
+        }
+        else {
+            return null;
+        }
     }
     /**
      * get domain
@@ -381,7 +493,7 @@ class SSOClient {
     /**
      * login with redirect, when press login button it will redirect to hosted ui
      *
-     * @returns Promise<any>
+     * @returns Promise<void>
      */
     loginWithRedirect() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -390,14 +502,40 @@ class SSOClient {
         });
     }
     /**
+     * refresh token request to cognito and
+     * save access_token, id_token and expries_in to session
+     *
+     * @return Promise<void>
+     */
+    refreshToken() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const res = yield refreshToken({
+                baseUrl: `https://${this.getDomain()}`,
+                client_id: this.getClientId(),
+                refresh_token: this.getRefreshToken(),
+            });
+            this.saveSession({
+                id_token: res === null || res === void 0 ? void 0 : res.id_token,
+                access_token: res === null || res === void 0 ? void 0 : res.access_token,
+                expires_in: res.expires_in,
+            });
+        });
+    }
+    /**
+     * get refresh_token from session
+     *
+     * @returns string
+     */
+    getRefreshToken() {
+        return this.storage.getItem(REFRESH_TOKEN);
+    }
+    /**
      * clear session  from storage
      *
      * @reutrn void
      */
     clearSession() {
-        window.localStorage.removeItem(ID_TOKEN);
-        window.localStorage.removeItem(ACCESS_TOKEN);
-        window.localStorage.removeItem(REFRESH_TOKEN);
+        [ID_TOKEN, ACCESS_TOKEN, REFRESH_TOKEN, EXPIRES_IN].forEach((key) => this.storage.removeItem(key));
         api.remove(IS_LOGGED_IN_KEY);
     }
     /**
@@ -435,14 +573,9 @@ const reducer = (state, action) => {
     }
 };
 
-const SSOProvider = ({ domain, clientId, redirectUri, onRedirectCalbck, children, }) => {
+const SSOProvider = ({ client, onRedirectCalbck, children, }) => {
     const didInitialise = useRef(false);
     const [state, dispatch] = useReducer(reducer, initialAuthState);
-    const [client] = useState(() => new SSOClient({
-        domain,
-        client_id: clientId,
-        redirect_uri: redirectUri,
-    }));
     useEffect(() => {
         if (didInitialise.current)
             return;
@@ -471,11 +604,14 @@ const SSOProvider = ({ domain, clientId, redirectUri, onRedirectCalbck, children
             }
         }))();
     }, [client, onRedirectCalbck]);
-    const loginWithRedirect = useCallback(() => client.loginWithRedirect(), [client]);
+    const loginWithRedirect = useCallback(() => __awaiter(void 0, void 0, void 0, function* () { return yield client.loginWithRedirect(); }), [client]);
+    const refreshToken = useCallback(() => __awaiter(void 0, void 0, void 0, function* () { return yield client.refreshToken(); }), [client]);
     const logout = useCallback(() => client.logout(), [client]);
-    const contextValue = useMemo(() => (Object.assign(Object.assign({}, state), { loginWithRedirect, logout })), [state, loginWithRedirect, logout]);
+    const contextValue = useMemo(() => (Object.assign(Object.assign({}, state), { loginWithRedirect,
+        logout,
+        refreshToken })), [state, loginWithRedirect, logout, refreshToken]);
     return (jsx(SSOContext.Provider, Object.assign({ value: contextValue }, { children: children })));
 };
 
-export { SSOProvider, useAuth };
+export { SSOClient, SSOProvider, useAuth };
 //# sourceMappingURL=index.esm.js.map
