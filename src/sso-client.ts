@@ -1,13 +1,20 @@
 import Cookies from "js-cookie";
-import jwtDecode from "jwt-decode";
-import { oauthToken, TokenResult } from "./api";
+import jwtDecode, { JwtPayload } from "jwt-decode";
+
+import {
+  oauthToken,
+  refreshToken as fetchRefreshToken,
+  TokenResult,
+} from "./api";
 import {
   ACCESS_TOKEN,
+  EXPIRES_IN,
   ID_TOKEN,
   IS_LOGGED_IN_KEY,
   IS_LOGGED_IN_VALUE,
   REFRESH_TOKEN,
 } from "./config/app";
+import { IStorageManager, LocalStorageManager } from "./storage";
 import { User } from "./user";
 import { createQueryParams } from "./utils/utils";
 
@@ -30,8 +37,13 @@ export interface LogoutOptions {
   logout_uri: string;
 }
 
+type Session = TokenResult;
+
 export default class SSOClient {
-  constructor(private options: SSOClientOptions) {}
+  constructor(
+    private options: SSOClientOptions,
+    private storage: IStorageManager = new LocalStorageManager()
+  ) {}
 
   /**
    * handle redirect callback that assign url from auth server
@@ -51,6 +63,7 @@ export default class SSOClient {
       id_token: res?.id_token,
       access_token: res?.access_token,
       refresh_token: res?.refresh_token,
+      expires_in: res.expires_in,
     });
   }
 
@@ -63,10 +76,12 @@ export default class SSOClient {
     id_token,
     access_token,
     refresh_token,
+    expires_in,
   }: TokenResult): void {
-    window.localStorage.setItem(ID_TOKEN, id_token);
-    window.localStorage.setItem(ACCESS_TOKEN, access_token);
-    window.localStorage.setItem(REFRESH_TOKEN, refresh_token);
+    this.storage.setItem(ID_TOKEN, id_token);
+    this.storage.setItem(ACCESS_TOKEN, access_token);
+    if (refresh_token) this.storage.setItem(REFRESH_TOKEN, refresh_token);
+    if (expires_in) this.storage.setItem(EXPIRES_IN, expires_in.toString());
     Cookies.set(IS_LOGGED_IN_KEY, IS_LOGGED_IN_VALUE);
   }
 
@@ -92,13 +107,51 @@ export default class SSOClient {
    * @returns Promise<User>
    */
   async getUser<TUser extends User>(): Promise<TUser> {
-    return Promise.resolve(
-      jwtDecode(window.localStorage.getItem(ID_TOKEN) as string)
-    );
+    // if (!this.getSession()) {
+    //   return Promise.reject("Invalid session");
+    // }
+    const id_token = this.storage.getItem<string>(ID_TOKEN);
+    // if (!id_token) return Promise.reject("id_token not defined");
+    return Promise.resolve(jwtDecode(id_token as string));
   }
 
-  private async checkSession() {
-    //
+  /**
+   * check token is expried or not
+   *
+   * @param token string
+   * @returns boolean
+   */
+  private isJwtExpired(token: string): boolean {
+    if (typeof token !== "string" || !token) return false;
+    const { exp } = jwtDecode<JwtPayload>(token);
+    const currentTime = new Date().getTime() / 1000;
+    return !exp || currentTime > exp;
+  }
+
+  /**
+   * check has valid session on storage or not
+   *
+   * @returns Promise<boolean>
+   */
+  getSession(): Session | null {
+    const access_token = this.storage.getItem<string>(ACCESS_TOKEN);
+    const id_token = this.storage.getItem<string>(ID_TOKEN);
+    const refresh_token = this.storage.getItem<string>(REFRESH_TOKEN);
+    // const expires_in = this.storage.getItem(EXPIRES_IN);
+    if (
+      access_token &&
+      id_token &&
+      refresh_token &&
+      !this.isJwtExpired(access_token)
+    ) {
+      return {
+        access_token,
+        id_token,
+        refresh_token,
+      };
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -135,7 +188,7 @@ export default class SSOClient {
       client_id: this.getClientId(),
       response_type: "code",
       state: "Cognito",
-      scope: "aws.cognito.signin.user.admin+email+openid+profile",
+      scope: "email+openid+profile",
       redirect_uri: this.getRedirectUri(),
     });
 
@@ -164,11 +217,39 @@ export default class SSOClient {
   /**
    * login with redirect, when press login button it will redirect to hosted ui
    *
-   * @returns Promise<any>
+   * @returns Promise<void>
    */
-  async loginWithRedirect(): Promise<any> {
+  async loginWithRedirect(): Promise<void> {
     const url = this.buildAuthorizeUrl();
     window.location.assign(url);
+  }
+
+  /**
+   * refresh token request to cognito and
+   * save access_token, id_token and expries_in to session
+   *
+   * @return Promise<void>
+   */
+  async refreshToken(): Promise<void> {
+    const res = await fetchRefreshToken({
+      baseUrl: `https://${this.getDomain()}`,
+      client_id: this.getClientId(),
+      refresh_token: this.getRefreshToken(),
+    });
+    this.saveSession({
+      id_token: res?.id_token,
+      access_token: res?.access_token,
+      expires_in: res.expires_in,
+    });
+  }
+
+  /**
+   * get refresh_token from session
+   *
+   * @returns string
+   */
+  private getRefreshToken() {
+    return this.storage.getItem<string>(REFRESH_TOKEN);
   }
 
   /**
@@ -176,10 +257,10 @@ export default class SSOClient {
    *
    * @reutrn void
    */
-  private clearSession() {
-    window.localStorage.removeItem(ID_TOKEN);
-    window.localStorage.removeItem(ACCESS_TOKEN);
-    window.localStorage.removeItem(REFRESH_TOKEN);
+  clearSession(): void {
+    [ID_TOKEN, ACCESS_TOKEN, REFRESH_TOKEN, EXPIRES_IN].forEach((key) =>
+      this.storage.removeItem(key)
+    );
     Cookies.remove(IS_LOGGED_IN_KEY);
   }
 

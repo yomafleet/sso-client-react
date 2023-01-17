@@ -4,7 +4,6 @@ import React, {
   useMemo,
   useReducer,
   useRef,
-  useState,
 } from "react";
 import SSOClient from "./sso-client";
 import { SSOContext } from "./sso-context";
@@ -14,29 +13,17 @@ import { User } from "./user";
 import { hasAuthParams, parseQuery } from "./utils/utils";
 
 interface SSOProviderProps {
-  domain: string;
-  clientId: string;
-  redirectUri: string;
+  client: SSOClient;
   onRedirectCalbck: (value: User) => void;
 }
 
 const SSOProvider: React.FC<React.PropsWithChildren<SSOProviderProps>> = ({
-  domain,
-  clientId,
-  redirectUri,
+  client,
   onRedirectCalbck,
   children,
 }) => {
   const didInitialise = useRef<boolean>(false);
   const [state, dispatch] = useReducer(reducer, initialAuthState);
-  const [client] = useState(
-    () =>
-      new SSOClient({
-        domain,
-        client_id: clientId,
-        redirect_uri: redirectUri,
-      })
-  );
 
   useEffect(() => {
     if (didInitialise.current) return;
@@ -64,15 +51,25 @@ const SSOProvider: React.FC<React.PropsWithChildren<SSOProviderProps>> = ({
   }, [client, onRedirectCalbck]);
 
   const loginWithRedirect = useCallback(
-    () => client.loginWithRedirect(),
+    async () => await client.loginWithRedirect(),
+    [client]
+  );
+
+  const refreshToken = useCallback(
+    async () => await client.refreshToken(),
     [client]
   );
 
   const logout = useCallback(() => client.logout(), [client]);
 
   const contextValue = useMemo(
-    () => ({ ...state, loginWithRedirect, logout }),
-    [state, loginWithRedirect, logout]
+    () => ({
+      ...state,
+      loginWithRedirect,
+      logout,
+      refreshToken,
+    }),
+    [state, loginWithRedirect, logout, refreshToken]
   );
 
   return (
