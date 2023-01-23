@@ -57,12 +57,9 @@ export const parseQuery = (queryString: string): AuthenticationResult => {
 export const parseAuthenticationResult = (
   queryString: string
 ): AuthenticationResult => {
-  if (queryString.indexOf("#") > -1) {
+  if (queryString.indexOf("#") > -1)
     queryString = queryString.substring(0, queryString.indexOf("#"));
-  }
-
   const searchParams = new URLSearchParams(queryString);
-
   return {
     state: searchParams.get("state")!,
     code: searchParams.get("code") || undefined,
