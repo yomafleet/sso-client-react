@@ -31,7 +31,11 @@ const SSOContext = React.createContext(initialContext);
  * @param context SSOContext
  * @returns SSOContextInterface<TUser>
  */
-const useAuth = (context = SSOContext) => useContext(context);
+const useAuth = (context = SSOContext) => {
+    if (context === undefined)
+        throw new Error(`useAuth must be used within a SSOProvider`);
+    return useContext(context);
+};
 
 /******************************************************************************
 Copyright (c) Microsoft Corporation.
@@ -57,138 +61,6 @@ function __awaiter(thisArg, _arguments, P, generator) {
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 }
-
-/*! js-cookie v3.0.1 | MIT */
-/* eslint-disable no-var */
-function assign (target) {
-  for (var i = 1; i < arguments.length; i++) {
-    var source = arguments[i];
-    for (var key in source) {
-      target[key] = source[key];
-    }
-  }
-  return target
-}
-/* eslint-enable no-var */
-
-/* eslint-disable no-var */
-var defaultConverter = {
-  read: function (value) {
-    if (value[0] === '"') {
-      value = value.slice(1, -1);
-    }
-    return value.replace(/(%[\dA-F]{2})+/gi, decodeURIComponent)
-  },
-  write: function (value) {
-    return encodeURIComponent(value).replace(
-      /%(2[346BF]|3[AC-F]|40|5[BDE]|60|7[BCD])/g,
-      decodeURIComponent
-    )
-  }
-};
-/* eslint-enable no-var */
-
-/* eslint-disable no-var */
-
-function init (converter, defaultAttributes) {
-  function set (key, value, attributes) {
-    if (typeof document === 'undefined') {
-      return
-    }
-
-    attributes = assign({}, defaultAttributes, attributes);
-
-    if (typeof attributes.expires === 'number') {
-      attributes.expires = new Date(Date.now() + attributes.expires * 864e5);
-    }
-    if (attributes.expires) {
-      attributes.expires = attributes.expires.toUTCString();
-    }
-
-    key = encodeURIComponent(key)
-      .replace(/%(2[346B]|5E|60|7C)/g, decodeURIComponent)
-      .replace(/[()]/g, escape);
-
-    var stringifiedAttributes = '';
-    for (var attributeName in attributes) {
-      if (!attributes[attributeName]) {
-        continue
-      }
-
-      stringifiedAttributes += '; ' + attributeName;
-
-      if (attributes[attributeName] === true) {
-        continue
-      }
-
-      // Considers RFC 6265 section 5.2:
-      // ...
-      // 3.  If the remaining unparsed-attributes contains a %x3B (";")
-      //     character:
-      // Consume the characters of the unparsed-attributes up to,
-      // not including, the first %x3B (";") character.
-      // ...
-      stringifiedAttributes += '=' + attributes[attributeName].split(';')[0];
-    }
-
-    return (document.cookie =
-      key + '=' + converter.write(value, key) + stringifiedAttributes)
-  }
-
-  function get (key) {
-    if (typeof document === 'undefined' || (arguments.length && !key)) {
-      return
-    }
-
-    // To prevent the for loop in the first place assign an empty array
-    // in case there are no cookies at all.
-    var cookies = document.cookie ? document.cookie.split('; ') : [];
-    var jar = {};
-    for (var i = 0; i < cookies.length; i++) {
-      var parts = cookies[i].split('=');
-      var value = parts.slice(1).join('=');
-
-      try {
-        var foundKey = decodeURIComponent(parts[0]);
-        jar[foundKey] = converter.read(value, foundKey);
-
-        if (key === foundKey) {
-          break
-        }
-      } catch (e) {}
-    }
-
-    return key ? jar[key] : jar
-  }
-
-  return Object.create(
-    {
-      set: set,
-      get: get,
-      remove: function (key, attributes) {
-        set(
-          key,
-          '',
-          assign({}, attributes, {
-            expires: -1
-          })
-        );
-      },
-      withAttributes: function (attributes) {
-        return init(this.converter, assign({}, this.attributes, attributes))
-      },
-      withConverter: function (converter) {
-        return init(assign({}, this.converter, converter), this.attributes)
-      }
-    },
-    {
-      attributes: { value: Object.freeze(defaultAttributes) },
-      converter: { value: Object.freeze(converter) }
-    }
-  )
-}
-
-var api = init(defaultConverter, { path: '/' });
 
 function e(e){this.message=e;}e.prototype=new Error,e.prototype.name="InvalidCharacterError";var r="undefined"!=typeof window&&window.atob&&window.atob.bind(window)||function(r){var t=String(r).replace(/=+$/,"");if(t.length%4==1)throw new e("'atob' failed: The string to be decoded is not correctly encoded.");for(var n,o,a=0,i=0,c="";o=t.charAt(i++);~o&&(n=a%4?64*n+o:o,a++%4)?c+=String.fromCharCode(255&n>>(-2*a&6)):0)o="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=".indexOf(o);return c};function t(e){var t=e.replace(/-/g,"+").replace(/_/g,"/");switch(t.length%4){case 0:break;case 2:t+="==";break;case 3:t+="=";break;default:throw "Illegal base64url string!"}try{return function(e){return decodeURIComponent(r(e).replace(/(.)/g,(function(e,r){var t=r.charCodeAt(0).toString(16).toUpperCase();return t.length<2&&(t="0"+t),"%"+t})))}(t)}catch(e){return r(t)}}function n(e){this.message=e;}function o(e,r){if("string"!=typeof e)throw new n("Invalid token specified");var o=!0===(r=r||{}).header?0:1;try{return JSON.parse(t(e.split(".")[o]))}catch(e){throw new n("Invalid token specified: "+e.message)}}n.prototype=new Error,n.prototype.name="InvalidTokenError";
 
@@ -252,8 +124,6 @@ const ACCESS_TOKEN = "Yoma_Fleet_access_token";
 const REFRESH_TOKEN = "Yoma_Fleet_refresh_token";
 const ID_TOKEN = "Yoma_Fleet_id_token";
 const EXPIRES_IN = "Yoma_Fleet_expires_in";
-const IS_LOGGED_IN_KEY = "Yoma_Fleet__JYU^E^WE&E";
-const IS_LOGGED_IN_VALUE = "fd44adYnj544(^5q43)933b763c7049ea844b5";
 
 class LocalStorageManager {
     constructor(prefix = "SSO_Client") {
@@ -314,25 +184,21 @@ const createQueryParams = (params) => Object.keys(params)
     .map((k) => k + "=" + params[k])
     .join("&");
 /**
- * parse query value from given  string
+ * parse authentication result
  *
  * @param queryString string
  * @returns AuthenticationResult
  */
-const parseQuery = (queryString) => {
-    if (queryString.indexOf("#") > -1) {
-        queryString = queryString.substr(0, queryString.indexOf("#"));
-    }
-    const queryParams = queryString.split("&");
-    const parsedQuery = {};
-    queryParams.forEach((qp) => {
-        const [key, val] = qp.split("=");
-        parsedQuery[key] = decodeURIComponent(val);
-    });
-    if (parsedQuery.expires_in) {
-        parsedQuery.expires_in = parseInt(parsedQuery.expires_in);
-    }
-    return parsedQuery;
+const parseAuthenticationResult = (queryString) => {
+    if (queryString.indexOf("#") > -1)
+        queryString = queryString.substring(0, queryString.indexOf("#"));
+    const searchParams = new URLSearchParams(queryString);
+    return {
+        state: searchParams.get("state"),
+        code: searchParams.get("code") || undefined,
+        error: searchParams.get("error") || undefined,
+        error_description: searchParams.get("error_description") || undefined,
+    };
 };
 
 class SSOClient {
@@ -395,10 +261,32 @@ class SSOClient {
     /**
      * handle redirect callback that assign url from auth server
      *
+     * @param url string
+     * @defualt {url: window.location.href}
+     * @return Promise<void>
+     */
+    handleRedirectCallback(url = window.location.href) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const queryStringFragments = url.split("?").slice(1);
+            if (queryStringFragments.length === 0) {
+                throw new Error("There are no query params available for parsing.");
+            }
+            const { state, code, error } = parseAuthenticationResult(queryStringFragments.join(""));
+            if (error)
+                throw new Error(error);
+            if (state !==
+                "Cognito" /** just hardcoded state value , we need to make a hashed state key */)
+                throw new Error("Invalid State");
+            yield this._requestToken(code);
+        });
+    }
+    /**
+     * handle request oauth token and save to the session
+     *
      * @param code string
      * @return Promise<void>
      */
-    handleRedirectCallback(code) {
+    _requestToken(code) {
         return __awaiter(this, void 0, void 0, function* () {
             const res = yield oauthToken({
                 baseUrl: `https://${this.getDomain()}`,
@@ -427,7 +315,10 @@ class SSOClient {
             this.storage.setItem(REFRESH_TOKEN, refresh_token);
         if (expires_in)
             this.storage.setItem(EXPIRES_IN, expires_in.toString());
-        api.set(IS_LOGGED_IN_KEY, IS_LOGGED_IN_VALUE);
+    }
+    hasSession() {
+        const session = this.getSession();
+        return session ? true : false;
     }
     /**
      * parse auth user from id_token
@@ -435,14 +326,8 @@ class SSOClient {
      * @returns Promise<User>
      */
     getUser() {
-        return __awaiter(this, void 0, void 0, function* () {
-            // if (!this.getSession()) {
-            //   return Promise.reject("Invalid session");
-            // }
-            const id_token = this.storage.getItem(ID_TOKEN);
-            // if (!id_token) return Promise.reject("id_token not defined");
-            return Promise.resolve(o(id_token));
-        });
+        const id_token = this.storage.getItem(ID_TOKEN);
+        return o(id_token);
     }
     /**
      * check token is expried or not
@@ -536,7 +421,6 @@ class SSOClient {
      */
     clearSession() {
         [ID_TOKEN, ACCESS_TOKEN, REFRESH_TOKEN, EXPIRES_IN].forEach((key) => this.storage.removeItem(key));
-        api.remove(IS_LOGGED_IN_KEY);
     }
     /**
      * handle logout
@@ -573,7 +457,7 @@ const reducer = (state, action) => {
     }
 };
 
-const SSOProvider = ({ client, onRedirectCalbck, children, }) => {
+const SSOProvider = ({ client, onRedirectCalback, children, }) => {
     const didInitialise = useRef(false);
     const [state, dispatch] = useReducer(reducer, initialAuthState);
     useEffect(() => {
@@ -584,26 +468,22 @@ const SSOProvider = ({ client, onRedirectCalbck, children, }) => {
             try {
                 let user;
                 if (hasAuthParams()) {
-                    const queryStringFragments = window.location.href.split("?").slice(1);
-                    if (queryStringFragments.length === 0)
-                        throw new Error("There are no query params available for parsing.");
-                    const { code } = parseQuery(queryStringFragments.join(""));
-                    if (code)
-                        yield client.handleRedirectCallback(code);
-                    user = yield client.getUser();
-                    onRedirectCalbck(user);
+                    yield client.handleRedirectCallback();
+                    user = client.getUser();
+                    onRedirectCalback(user);
                 }
                 else {
-                    user = yield client.getUser();
+                    if (client.hasSession())
+                        user = client.getUser();
                 }
                 dispatch({ type: "INITIALISED", user });
             }
             catch (error) {
-                console.log(error);
+                console.error(error);
                 dispatch({ type: "ERROR", error: new Error("Login Error") });
             }
         }))();
-    }, [client, onRedirectCalbck]);
+    }, [client, onRedirectCalback]);
     const loginWithRedirect = useCallback(() => __awaiter(void 0, void 0, void 0, function* () { return yield client.loginWithRedirect(); }), [client]);
     const refreshToken = useCallback(() => __awaiter(void 0, void 0, void 0, function* () { return yield client.refreshToken(); }), [client]);
     const logout = useCallback(() => client.logout(), [client]);

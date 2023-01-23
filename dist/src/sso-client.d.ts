@@ -25,10 +25,18 @@ export default class SSOClient {
     /**
      * handle redirect callback that assign url from auth server
      *
+     * @param url string
+     * @defualt {url: window.location.href}
+     * @return Promise<void>
+     */
+    handleRedirectCallback(url?: string): Promise<void>;
+    /**
+     * handle request oauth token and save to the session
+     *
      * @param code string
      * @return Promise<void>
      */
-    handleRedirectCallback(code: string): Promise<void>;
+    private _requestToken;
     /**
      * handle to save session to storage
      *
@@ -47,12 +55,13 @@ export default class SSOClient {
      * @returns string
      */
     private authorizeUrl;
+    hasSession(): boolean;
     /**
      * parse auth user from id_token
      *
      * @returns Promise<User>
      */
-    getUser<TUser extends User>(): Promise<TUser>;
+    getUser<TUser extends User>(): TUser;
     /**
      * check token is expried or not
      *

@@ -18,8 +18,9 @@ import { User } from "../user";
 const useAuth = <TUser extends User = User>(
   context = SSOContext
 ): SSOContextInterface<TUser> => {
-  if (context === undefined)
-    throw new Error(`useAuth must be used within a SSOProvider`);
+  if (context === undefined) {
+    throw new Error("You forgot to wrap your component in <SSOProvider>.");
+  }
 
   return useContext(context) as SSOContextInterface<TUser>;
 };
