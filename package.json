@@ -31,6 +31,7 @@
     "url": "https://github.com/yomafleet/sso-client-react/issues"
   },
   "scripts": {
+    "prepare": "npm run build",
     "prebuild": "rimraf dist",
     "build": "rollup -c",
     "start:c1": "npm start --prefix=examples/client_1"
