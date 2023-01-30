@@ -5,20 +5,20 @@ export interface IStorageManager {
 }
 
 export class LocalStorageManager implements IStorageManager {
-  constructor(private prefix: string = "SSO_Client") {}
+  constructor(
+    private prefix: string = "SSO_Client",
+    private storage: Storage = window.localStorage
+  ) {}
 
   /**
    * set item to localStorage
    *
    * @param key string
-   * @param value string
+   * @param value T
    * @return void
    */
-  setItem(key: string, value: string): void {
-    window.localStorage.setItem(
-      `${this.prefix}__${key}`,
-      JSON.stringify(value)
-    );
+  setItem<T>(key: string, value: T): void {
+    this.storage.setItem(`${this.prefix}__${key}`, JSON.stringify(value));
   }
 
   /**
@@ -28,12 +28,12 @@ export class LocalStorageManager implements IStorageManager {
    * @returns T | undefined
    */
   getItem<T>(key: string): T | undefined {
-    const json = window.localStorage.getItem(`${this.prefix}__${key}`);
+    const json = this.storage.getItem(`${this.prefix}__${key}`);
     if (!json) return;
     try {
       return JSON.parse(json) as T;
     } catch (e) {
-      return;
+      throw new Error(`Error parsing JSON for key ${key}`);
     }
   }
 
@@ -44,6 +44,20 @@ export class LocalStorageManager implements IStorageManager {
    * @return void
    */
   removeItem(key: string): void {
-    window.localStorage.removeItem(`${this.prefix}__${key}`);
+    this.storage.removeItem(`${this.prefix}__${key}`);
+  }
+
+  /**
+   * Clear all items from local storage with the prefix
+   *
+   * @return void
+   */
+  clear(): void {
+    for (let i = 0; i < this.storage.length; i++) {
+      const key = this.storage.key(i);
+      if (key && key.startsWith(this.prefix)) {
+        this.storage.removeItem(key);
+      }
+    }
   }
 }
